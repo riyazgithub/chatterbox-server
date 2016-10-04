@@ -28,8 +28,10 @@ var defaultCorsHeaders = {
   'access-control-max-age': 10 // Seconds.
 };
 
-var ret = {results:[true]};
+
+var ret = JSON.stringify({results: [true]});
 var requestHandler = function(request, response) {
+
   // Request and Response come from node's http module.
   //
   // They include information about both the incoming request, such as
@@ -48,11 +50,6 @@ var requestHandler = function(request, response) {
   var statusCode = 200;
 
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
-  if (request.method === 'POST') {
-    statusCode = 201;
-
-  }
-
 
   // See the note below about CORS headers.
   var headers = defaultCorsHeaders;
@@ -61,11 +58,11 @@ var requestHandler = function(request, response) {
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'text/plain';
+  headers['Content-Type'] = 'application/json';
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
+
 
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
@@ -74,7 +71,23 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end(JSON.stringify(ret));
+
+  if (request.method === 'POST') {
+    statusCode = 201;
+    var body = [];
+    request.on('data', function(chunk) {
+      body.push(chunk);
+    }).on('end', function() {
+      body = Buffer.concat(body).toString();
+      ret = JSON.stringify(body);
+    });
+  
+  } else if (request.method === 'GET') {
+    statusCode = 200;
+  }
+
+  response.writeHead(statusCode, headers);
+  response.status(200).end(ret);
 };
 
 exports.requestHandler = requestHandler;
