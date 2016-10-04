@@ -29,7 +29,8 @@ var defaultCorsHeaders = {
 };
 
 
-var ret = JSON.stringify({results: [true]});
+var storage = {results: []};
+var body = [];
 var requestHandler = function(request, response) {
 
   // Request and Response come from node's http module.
@@ -71,23 +72,32 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-
-  if (request.method === 'POST') {
+  if (request.url !== '/classes/messages' ) {
+    statusCode = 404;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(storage));    
+  } else if (request.method === 'POST') {
     statusCode = 201;
-    var body = [];
+    response.writeHead(statusCode, headers);    
     request.on('data', function(chunk) {
-      body.push(chunk);
-    }).on('end', function() {
-      body = Buffer.concat(body).toString();
-      ret = JSON.stringify(body);
+      var body = chunk;
+      storage.results.push(JSON.parse(body.toString()));
+      response.end(JSON.stringify(storage));
     });
-  
-  } else if (request.method === 'GET') {
+  } else if (request.method === 'GET' || request.method === 'OPTIONS') {
     statusCode = 200;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(storage));
+  } else {
+    statusCode = 404;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(storage));    
   }
 
-  response.writeHead(statusCode, headers);
-  response.status(200).end(ret);
+  console.log('Return ', storage);
+
+
+
 };
 
 exports.requestHandler = requestHandler;
