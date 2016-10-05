@@ -21,16 +21,17 @@ this file and include it in basic-server.js so that it actually works.
 //
 // Another way to get around this restriction is to serve you chat
 // client from this domain by setting up static file serving.
-var defaultCorsHeaders = {
+var headers = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, accept',
-  'access-control-max-age': 10 // Seconds.
+  'access-control-max-age': 10,
+  'Content-Type': 'application/json'
 };
 
 
-var storage = {results: []};
-var body = [];
+var storage = {results: [{ username: 'Jono', message: 'Do my bidding!', objectId: 1}]};
+var counter = 1;
 var requestHandler = function(request, response) {
 
   // Request and Response come from node's http module.
@@ -52,14 +53,12 @@ var requestHandler = function(request, response) {
 
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
-  // See the note below about CORS headers.
-  var headers = defaultCorsHeaders;
+
 
   // Tell the client we are sending them plain text.
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'application/json';
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
@@ -72,7 +71,7 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  if (request.url !== '/classes/messages' ) {
+  if (request.url.search(/(\/classes\/messages)/) < 0) {
     statusCode = 404;
     response.writeHead(statusCode, headers);
     response.end(JSON.stringify(storage));    
@@ -81,7 +80,9 @@ var requestHandler = function(request, response) {
     response.writeHead(statusCode, headers);    
     request.on('data', function(chunk) {
       var body = chunk;
-      storage.results.push(JSON.parse(body.toString()));
+      body = JSON.parse(body.toString());
+      body.objectId = ++counter;
+      storage.results.push(body);
       response.end(JSON.stringify(storage));
     });
   } else if (request.method === 'GET' || request.method === 'OPTIONS') {
